@@ -1,57 +1,51 @@
 import React from 'react';
-import { UserCheck, MapPin, Truck, Wrench, ShieldAlert } from 'lucide-react';
+import { Truck, Navigation, Wrench } from 'lucide-react';
 
 export default function FieldResponseCard({ activeStep, isTrapActive }) {
   return (
-    <div className="bg-[#1E293B] border border-[#334155] rounded-xl p-5 shadow-sm space-y-4">
-      <div className="flex items-center justify-between border-b border-[#334155] pb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-[#0F172A] border border-[#334155] text-[#D4EB00]">
-            <Truck className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-white tracking-tight">
-              Field Response Panel
-            </h3>
-            <p className="text-xs text-[#94A3B8]">Technician & Spare Parts Logistics</p>
-          </div>
+    <div className="bg-[#111827] border border-[rgba(148,163,184,0.16)] rounded-[10px] p-5 shadow-sm space-y-4">
+      <div className="flex items-center justify-between border-b border-[rgba(148,163,184,0.1)] pb-3">
+        <div className="flex items-center gap-2">
+          <Truck className="w-4 h-4 text-[#0EA5E9]" />
+          <h3 className="text-sm font-bold text-[#F8FAFC]">
+            Field response
+          </h3>
         </div>
-        
         <span className={`badge-status ${
           isTrapActive ? 'badge-red' : (activeStep >= 2 ? 'badge-emerald' : 'badge-neutral')
         }`}>
-          {isTrapActive ? 'Dispatch Halted' : (activeStep >= 2 ? 'En Route' : 'Standby')}
+          {isTrapActive ? 'Dispatch halted' : (activeStep >= 2 ? 'En route' : 'Standby')}
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-        <div className="bg-[#0F172A] border border-[#334155] p-3.5 rounded-lg space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[#94A3B8]">Technician:</span>
-            <strong className="text-white font-semibold">Sipho (TECH-409)</strong>
+      <div className="space-y-2 text-xs">
+        <div className="bg-[#162033] border border-[rgba(148,163,184,0.16)] p-3 rounded-md space-y-1.5 font-mono">
+          <div className="flex justify-between">
+            <span className="text-[#94A3B8]">Assigned specialist:</span>
+            <strong className="text-[#F8FAFC]">Sipho · TECH-409</strong>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex justify-between">
             <span className="text-[#94A3B8]">Distance:</span>
-            <span className="text-[#D4EB00] font-mono font-bold">5.2 km away</span>
+            <span className="text-[#0EA5E9] font-bold">5.2 km away</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#94A3B8]">Estimated arrival:</span>
-            <span className="text-white font-mono font-semibold">12 minutes</span>
+          <div className="flex justify-between">
+            <span className="text-[#94A3B8]">Est. arrival:</span>
+            <span className="text-[#F8FAFC]">12 minutes</span>
           </div>
         </div>
 
-        <div className="bg-[#0F172A] border border-[#334155] p-3.5 rounded-lg space-y-2">
-          <div className="flex items-center justify-between">
+        <div className="bg-[#162033] border border-[rgba(148,163,184,0.16)] p-3 rounded-md space-y-1.5 font-mono">
+          <div className="flex justify-between">
             <span className="text-[#94A3B8]">Required part:</span>
-            <strong className="text-white font-semibold">PSU-24V Module</strong>
+            <strong className="text-[#F8FAFC]">PSU-24V Module</strong>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#94A3B8]">Inventory hub:</span>
-            <span className="text-[#10B981] font-mono font-bold">Midrand (14 units)</span>
+          <div className="flex justify-between">
+            <span className="text-[#94A3B8]">Midrand hub stock:</span>
+            <span className="text-[#22C55E] font-bold">14 units</span>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex justify-between">
             <span className="text-[#94A3B8]">Vehicle ID:</span>
-            <span className="text-white font-mono">Nissan NP200 (REG-GP)</span>
+            <span className="text-[#F8FAFC]">Nissan NP200 Bakkie</span>
           </div>
         </div>
       </div>

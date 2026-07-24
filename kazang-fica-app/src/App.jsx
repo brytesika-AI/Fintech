@@ -1,17 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  Play, 
-  FileText, 
-  AlertTriangle, 
-  RefreshCw, 
-  ShieldAlert, 
-  CheckCircle2
-} from 'lucide-react';
+import { Play, FileText, AlertTriangle, RefreshCw, ShieldAlert } from 'lucide-react';
 
 import AppHeader from './components/AppHeader';
 import IncidentHeader from './components/IncidentHeader';
-import ExecutiveSummary from './components/ExecutiveSummary';
-import MetricCards from './components/MetricCard';
+import ExecutiveOverview from './components/ExecutiveSummary';
+import KeyMetrics from './components/MetricCard';
 import WorkflowStepper from './components/WorkflowStepper';
 import AgentCards from './components/AgentCard';
 import ActivityTimeline from './components/ActivityTimeline';
@@ -29,9 +22,9 @@ export default function App() {
   const [activeStep, setActiveStep] = useState(0); // 0 = Idle, 1 = Triage, 2 = Logistics, 3 = Comms
   const [agentData, setAgentData] = useState([]);
   const [logs, setLogs] = useState([
-    `[06:55:01.002] SYSTEM: NOC Initialization complete. Node 'Roodepoort #EP-8842' online.`,
-    `[06:55:01.015] TELEMETRY: 24V PSU module fluctuation detected (18.2V -> 0.0V drop).`,
-    `[06:55:01.022] GOVERNANCE: AI-SRF Level 1 active. Sentinel monitor listening for telemetry events.`
+    `[07:02:01.002] SYSTEM: NOC Initialization complete. Node 'Roodepoort #EP-8842' online.`,
+    `[07:02:01.015] TELEMETRY: 24V PSU module fluctuation detected (18.2V -> 0.0V drop).`,
+    `[07:02:01.022] GOVERNANCE: AI-SRF Level 1 active. Sentinel monitor listening for telemetry events.`
   ]);
 
   // Modal / Drawer States
@@ -180,71 +173,79 @@ Format the output strictly as a JSON array of 3 objects: [{ "agent": "Triage", "
   };
 
   return (
-    <div className={`min-h-screen flex flex-col bg-[#0F172A] text-[#F8FAFC] selection:bg-[#D4EB00] selection:text-[#0F172A] ${
+    <div className={`min-h-screen flex flex-col bg-[#0B1120] text-[#F8FAFC] selection:bg-[#0EA5E9] selection:text-white ${
       isTrapActive ? 'flash-screen-border' : ''
     }`}>
       
       {/* 1. TOP APPLICATION BAR */}
       <AppHeader onOpenSystemDetails={() => setShowSystemDrawer(true)} />
 
-      {/* MAIN CONTAINER */}
-      <main className={`flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 ${
+      {/* MAIN CONTAINER (Centered 1440px desktop shell) */}
+      <main className={`flex-1 max-w-[1440px] w-full mx-auto px-6 sm:px-8 py-6 space-y-6 ${
         showTrapModal || showConfirmModal ? 'pointer-events-none opacity-40 blur-[1px]' : ''
       }`}>
         
-        {/* 2. INCIDENT HEADER */}
+        {/* 2. INCIDENT COMMAND BAR */}
         <IncidentHeader 
           activeStep={activeStep}
           isTrapActive={isTrapActive}
           isOrchestrating={isOrchestrating}
         />
 
-        {/* 3. EXECUTIVE SUMMARY */}
-        <ExecutiveSummary isTrapActive={isTrapActive} />
+        {/* 3. EXECUTIVE OVERVIEW (2-Column) */}
+        <ExecutiveOverview 
+          isTrapActive={isTrapActive}
+          isOrchestrating={isOrchestrating}
+          onOpenConfirmModal={() => setShowConfirmModal(true)}
+        />
 
-        {/* 5. KEY METRICS */}
-        <MetricCards 
+        {/* 4. KEY METRICS (4 Equal-width cards) */}
+        <KeyMetrics 
           activeStep={activeStep}
           isTrapActive={isTrapActive}
         />
 
-        {/* 6. AUTONOMOUS WORKFLOW STEPPER */}
+        {/* 5. AUTONOMOUS WORKFLOW STEPPER */}
         <WorkflowStepper 
           activeStep={activeStep}
           isTrapActive={isTrapActive}
         />
 
-        {/* 6 & 7. AGENT CARDS */}
+        {/* 6. AGENT CARDS */}
         <AgentCards 
           agentData={agentData}
           activeStep={activeStep}
           isTrapActive={isTrapActive}
         />
 
-        {/* 7 & 8. ACTIVITY TIMELINE & FIELD RESPONSE PANEL */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ActivityTimeline logs={logs} onExportLogs={exportAuditLogs} />
-          <FieldResponseCard activeStep={activeStep} isTrapActive={isTrapActive} />
+        {/* 7. ACTIVITY TIMELINE & FIELD RESPONSE PANEL (2-Column) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-7">
+            <ActivityTimeline logs={logs} onExportLogs={exportAuditLogs} />
+          </div>
+          <div className="lg:col-span-5">
+            <FieldResponseCard activeStep={activeStep} isTrapActive={isTrapActive} />
+          </div>
         </div>
 
       </main>
 
-      {/* 4. FOOTER & PRIMARY ACTIONS */}
-      <footer className="sticky bottom-0 z-40 bg-[#1E293B] border-t border-[#334155] px-6 py-4 shadow-2xl">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* 8. SAFE ACTION FOOTER */}
+      <footer className="sticky bottom-0 z-40 bg-[#111827] border-t border-[rgba(148,163,184,0.16)] px-6 py-4 shadow-2xl">
+        <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           
           {/* Executive Governance Indicator */}
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[#0F172A] border border-[#334155] text-[#D4EB00]">
-              <ShieldAlert className={`w-5 h-5 ${isTrapActive ? 'text-[#EF4444]' : 'text-[#D4EB00]'}`} />
+            <div className="w-9 h-9 rounded-lg bg-[#162033] border border-[rgba(148,163,184,0.16)] flex items-center justify-center text-[#0EA5E9]">
+              <ShieldAlert className={`w-5 h-5 ${isTrapActive ? 'text-[#EF4444]' : 'text-[#0EA5E9]'}`} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-sm text-white">
+                <span className="font-bold text-sm text-[#F8FAFC]">
                   Executive Governance Overlay
                 </span>
                 <span className={isTrapActive ? "badge-status badge-red text-[11px]" : "badge-status badge-emerald text-[11px]"}>
-                  {isTrapActive ? "Lethal Risk Intercept Active" : "AI-SRF Level 1 Active"}
+                  {isTrapActive ? "Lethal risk intercept active" : "AI-SRF Level 1 active"}
                 </span>
               </div>
               <p className="text-xs text-[#94A3B8]">
@@ -253,8 +254,8 @@ Format the output strictly as a JSON array of 3 objects: [{ "agent": "Triage", "
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          {/* Action Controls */}
+          <div className="flex flex-wrap items-center gap-3">
             {isTrapActive && (
               <button
                 onClick={resetDashboard}
@@ -269,8 +270,8 @@ Format the output strictly as a JSON array of 3 objects: [{ "agent": "Triage", "
               disabled={isOrchestrating || isTrapActive}
               className="btn-secondary-action text-xs"
             >
-              <FileText className="w-4 h-4 text-[#94A3B8]" />
-              Review resolution plan
+              <FileText className="w-3.5 h-3.5 text-[#94A3B8]" />
+              Review plan
             </button>
 
             <button
@@ -280,7 +281,7 @@ Format the output strictly as a JSON array of 3 objects: [{ "agent": "Triage", "
             >
               {isOrchestrating ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-[#0F172A]" />
+                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
                   Resolving...
                 </>
               ) : (
@@ -294,10 +295,10 @@ Format the output strictly as a JSON array of 3 objects: [{ "agent": "Triage", "
             <button
               onClick={triggerGovernanceTrap}
               disabled={isOrchestrating}
-              className="btn-danger-outline ml-2"
+              className="btn-danger-outline ml-1 text-xs"
               title="Simulate vault physical breach edge case"
             >
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-3.5 h-3.5" />
               Simulate Edge Case (Device Tampering)
             </button>
           </div>
