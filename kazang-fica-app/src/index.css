@@ -1,17 +1,33 @@
 :root {
-  --bg-primary: #341212; /* Lesaka Coffee Bean */
-  --bg-card: #240C0C;    /* Darker Coffee Bean */
-  --bg-card-hover: #2D0F0F;
-  --border-card: #4A1A1A;
-  --accent-lime: #D4EB00;/* Lesaka Electric Lime */
-  --accent-lime-dim: rgba(212, 235, 0, 0.15);
-  --alert-red: #FF3333;  /* Lesaka Critical Alert Red */
-  --alert-red-dim: rgba(255, 51, 51, 0.2);
-  --text-white: #FFFFFF;
-  --text-slate: #CCCCCC;
-  --text-muted: #998888;
+  --bg-primary: #0F172A;        /* Slate 900 Deep Navy Dark */
+  --bg-card: #1E293B;       /* Slate 800 Elevated Surface */
+  --bg-card-hover: #26354A;  /* Hover state */
+  --border-subtle: #334155;   /* Slate 700 Border */
+  --border-focus: #475569;
+  
+  --accent-brand: #D4EB00;   /* Controlled Lesaka Lime Accent */
+  --accent-brand-hover: #E2F51A;
+  --accent-brand-dim: rgba(212, 235, 0, 0.12);
+  
+  --status-emerald: #10B981;  /* Healthy / Complete */
+  --status-emerald-dim: rgba(16, 185, 129, 0.15);
+  
+  --status-amber: #F59E0B;    /* Warning / In Progress */
+  --status-amber-dim: rgba(245, 158, 11, 0.15);
+  
+  --status-red: #EF4444;      /* Critical / Tamper / Flag */
+  --status-red-dim: rgba(239, 68, 68, 0.2);
+  
+  --text-primary: #F8FAFC;    /* Slate 50 High Contrast */
+  --text-secondary: #94A3B8;  /* Slate 400 Muted Text */
+  --text-tertiary: #64748B;   /* Slate 500 Subtitle Text */
+  
   --font-sans: 'Rubik', 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 }
 
 * {
@@ -22,11 +38,12 @@
 
 body {
   background-color: var(--bg-primary);
-  color: var(--text-white);
+  color: var(--text-primary);
   font-family: var(--font-sans);
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Custom Scrollbar */
@@ -36,27 +53,27 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1A0707;
+  background: #0B1120;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D4EB00;
+  background: #334155;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #E2F51A;
+  background: #475569;
 }
 
 /* Screen Border Red Flash Animation for Governance Trap */
 @keyframes flashScreenRed {
   0%, 100% {
-    box-shadow: inset 0 0 45px #FF3333, 0 0 35px #FF3333;
-    border: 4px solid #FF3333;
+    box-shadow: inset 0 0 45px #EF4444, 0 0 35px #EF4444;
+    border: 3px solid #EF4444;
   }
   50% {
-    box-shadow: inset 0 0 85px rgba(255, 51, 51, 0.95), 0 0 60px rgba(255, 51, 51, 0.95);
-    border: 4px solid #FF6666;
+    box-shadow: inset 0 0 85px rgba(239, 68, 68, 0.95), 0 0 60px rgba(239, 68, 68, 0.95);
+    border: 3px solid #F87171;
   }
 }
 
@@ -66,120 +83,140 @@ body {
   z-index: 50;
 }
 
-/* Glowing Active Column Border */
-.active-column-glow {
-  border: 2px solid #D4EB00 !important;
-  box-shadow: 0 0 30px rgba(212, 235, 0, 0.35), inset 0 0 15px rgba(212, 235, 0, 0.1);
-  transform: translateY(-2px);
-  transition: all 0.3s ease;
+/* Stepper Active Glow */
+.stepper-active-glow {
+  border-color: #D4EB00 !important;
+  box-shadow: 0 0 20px rgba(212, 235, 0, 0.25);
 }
 
-/* Red Alert Column Border */
-.alert-column-glow {
-  border: 2px solid #FF3333 !important;
-  box-shadow: 0 0 35px rgba(255, 51, 51, 0.45), inset 0 0 20px rgba(255, 51, 51, 0.15);
-  animation: pulseRedBorder 1.5s infinite;
+.stepper-alert-glow {
+  border-color: #EF4444 !important;
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.35);
 }
 
-@keyframes pulseRedBorder {
-  0%, 100% { border-color: #FF3333; }
-  50% { border-color: #FF7777; }
-}
-
-/* NOC Console Terminal Window */
-.noc-terminal {
-  background-color: #150606;
-  border: 1px solid #4A1A1A;
-  border-radius: 12px;
-  font-family: var(--font-mono);
-  color: var(--text-slate);
-  padding: 1.2rem;
-  font-size: 0.82rem;
-  line-height: 1.6;
-  box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
-}
-
-/* Custom Buttons */
-.btn-electric-lime {
+/* Professional Enterprise Buttons */
+.btn-primary-action {
   background-color: #D4EB00;
-  color: #1A0707;
-  font-weight: 800;
-  padding: 0.85rem 1.6rem;
+  color: #0F172A;
+  font-weight: 700;
+  padding: 0.65rem 1.35rem;
   border-radius: 8px;
   border: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  font-size: 0.88rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  box-shadow: 0 4px 20px rgba(212, 235, 0, 0.25);
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
   font-family: var(--font-sans);
+  box-shadow: 0 2px 8px rgba(212, 235, 0, 0.2);
 }
 
-.btn-electric-lime:hover:not(:disabled) {
+.btn-primary-action:hover:not(:disabled) {
   background-color: #E2F51A;
-  box-shadow: 0 0 25px rgba(212, 235, 0, 0.6);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(212, 235, 0, 0.35);
 }
 
-.btn-electric-lime:disabled {
+.btn-primary-action:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  transform: none;
   box-shadow: none;
-  filter: grayscale(0.5);
 }
 
-.btn-trap-red {
-  background-color: rgba(255, 51, 51, 0.15);
-  color: #FF3333;
-  border: 1.5px solid #FF3333;
-  font-weight: 700;
-  padding: 0.75rem 1.4rem;
+.btn-secondary-action {
+  background-color: #1E293B;
+  color: #F8FAFC;
+  border: 1px solid #334155;
+  font-weight: 600;
+  padding: 0.65rem 1.2rem;
   border-radius: 8px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  transition: all 0.25s ease;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
   font-family: var(--font-sans);
 }
 
-.btn-trap-red:hover:not(:disabled) {
-  background-color: #FF3333;
-  color: #FFFFFF;
-  box-shadow: 0 0 20px rgba(255, 51, 51, 0.6);
-  transform: translateY(-2px);
+.btn-secondary-action:hover:not(:disabled) {
+  background-color: #334155;
+  border-color: #475569;
 }
 
-/* Utility Badges */
-.badge-lime {
-  background: rgba(212, 235, 0, 0.15);
-  color: #D4EB00;
-  border: 1px solid rgba(212, 235, 0, 0.4);
-  padding: 0.25rem 0.65rem;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+.btn-danger-outline {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+  border: 1px solid #EF4444;
+  font-weight: 600;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 0.2s ease;
+  font-size: 0.825rem;
+  font-family: var(--font-sans);
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+  background-color: #EF4444;
+  color: #FFFFFF;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.4);
+}
+
+/* Status Badges */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  line-height: 1;
+}
+
+.badge-emerald {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.badge-amber {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
 .badge-red {
-  background: rgba(255, 51, 51, 0.2);
-  color: #FF3333;
-  border: 1px solid rgba(255, 51, 51, 0.5);
-  padding: 0.25rem 0.65rem;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.badge-neutral {
+  background-color: rgba(148, 163, 184, 0.12);
+  color: #94A3B8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.badge-lime {
+  background-color: rgba(212, 235, 0, 0.15);
+  color: #D4EB00;
+  border: 1px solid rgba(212, 235, 0, 0.35);
+}
+
+/* Animations */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
