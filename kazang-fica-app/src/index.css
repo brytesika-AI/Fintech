@@ -1,0 +1,196 @@
+:root {
+  --bg-coffee: #341212;
+  --bg-card: #230b0b;
+  --bg-card-hover: #2e0e0e;
+  --bg-card-glass: rgba(40, 13, 13, 0.85);
+  --lime-primary: #D4EB00;
+  --lime-glow: rgba(212, 235, 0, 0.35);
+  --lime-dim: rgba(212, 235, 0, 0.12);
+  --text-white: #FFFFFF;
+  --text-light: #F1F5F9;
+  --text-muted: #94A3B8;
+  --border-muted: rgba(255, 255, 255, 0.1);
+  --border-lime: rgba(212, 235, 0, 0.4);
+  --red-flag: #EF4444;
+  --red-flag-bg: rgba(239, 68, 68, 0.15);
+  --red-flag-border: rgba(239, 68, 68, 0.5);
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-coffee);
+  color: var(--text-white);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-coffee);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 235, 0, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--lime-primary);
+}
+
+/* Glow & Utilities */
+.glow-lime {
+  box-shadow: 0 0 20px var(--lime-glow);
+}
+
+.glow-red {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+.border-lime-glow {
+  border: 1px solid var(--lime-primary);
+  box-shadow: 0 0 12px var(--lime-glow);
+}
+
+/* Animations */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(0.98); }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(1000%); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s infinite ease-in-out;
+}
+
+.scanline-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanline-effect::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, transparent, var(--lime-primary), transparent);
+  animation: scanline 4s linear infinite;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Buttons */
+.btn-lime {
+  background-color: var(--lime-primary);
+  color: #120505;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.btn-lime:hover:not(:disabled) {
+  background-color: #E2F51A;
+  box-shadow: 0 0 20px var(--lime-primary);
+  transform: translateY(-1px);
+}
+
+.btn-lime:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--lime-primary);
+  border: 1px solid var(--lime-primary);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--lime-dim);
+  box-shadow: 0 0 15px var(--lime-glow);
+}
+
+/* Data Table Styling */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-muted);
+  background: var(--bg-card);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+th {
+  background-color: rgba(30, 8, 8, 0.9);
+  color: var(--lime-primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-lime);
+  font-size: 0.8rem;
+}
+
+td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-light);
+}
+
+tr:hover td {
+  background-color: var(--bg-card-hover);
+}
+
+/* Code / Json box */
+.code-block {
+  font-family: var(--font-mono);
+  background-color: #170707;
+  color: #E2E8F0;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.85rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
