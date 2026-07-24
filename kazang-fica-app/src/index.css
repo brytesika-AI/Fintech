@@ -1,14 +1,15 @@
 :root {
   --bg-primary: #341212;
   --bg-card: #240C0C;
+  --bg-card-hover: #2D0F0F;
   --border-card: #4A1A1A;
   --accent-lime: #D4EB00;
   --accent-lime-dim: rgba(212, 235, 0, 0.15);
   --alert-red: #FF3333;
-  --alert-red-dim: rgba(255, 51, 51, 0.15);
+  --alert-red-dim: rgba(255, 51, 51, 0.2);
   --text-white: #FFFFFF;
   --text-slate: #CCCCCC;
-  --text-muted: #888888;
+  --text-muted: #998888;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
@@ -28,20 +29,6 @@ body {
   line-height: 1.5;
 }
 
-/* Leaflet Dark Popup Customization */
-.leaflet-popup-content-wrapper, .leaflet-popup-tip {
-  background-color: #1A0707 !important;
-  color: #FFFFFF !important;
-  border: 1px solid #D4EB00 !important;
-  box-shadow: 0 0 15px rgba(212, 235, 0, 0.3) !important;
-  border-radius: 8px !important;
-}
-
-.leaflet-container {
-  border-radius: 10px;
-  border: 1px solid #4A1A1A;
-}
-
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -49,7 +36,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #240C0C;
+  background: #1A0707;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -57,88 +44,115 @@ body {
   border-radius: 3px;
 }
 
-/* Buttons */
-.btn-lime {
+::-webkit-scrollbar-thumb:hover {
+  background: #E2F51A;
+}
+
+/* Screen Border Red Flash Animation for Governance Trap */
+@keyframes flashScreenRed {
+  0%, 100% {
+    box-shadow: inset 0 0 45px #FF3333, 0 0 35px #FF3333;
+    border: 4px solid #FF3333;
+  }
+  50% {
+    box-shadow: inset 0 0 85px rgba(255, 51, 51, 0.95), 0 0 60px rgba(255, 51, 51, 0.95);
+    border: 4px solid #FF6666;
+  }
+}
+
+.flash-screen-border {
+  animation: flashScreenRed 1.2s infinite ease-in-out;
+  position: relative;
+  z-index: 50;
+}
+
+/* Glowing Active Column Border */
+.active-column-glow {
+  border: 2px solid #D4EB00 !important;
+  box-shadow: 0 0 30px rgba(212, 235, 0, 0.35), inset 0 0 15px rgba(212, 235, 0, 0.1);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+/* Red Alert Column Border */
+.alert-column-glow {
+  border: 2px solid #FF3333 !important;
+  box-shadow: 0 0 35px rgba(255, 51, 51, 0.45), inset 0 0 20px rgba(255, 51, 51, 0.15);
+  animation: pulseRedBorder 1.5s infinite;
+}
+
+@keyframes pulseRedBorder {
+  0%, 100% { border-color: #FF3333; }
+  50% { border-color: #FF7777; }
+}
+
+/* NOC Console Terminal Window */
+.noc-terminal {
+  background-color: #150606;
+  border: 1px solid #4A1A1A;
+  border-radius: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-slate);
+  padding: 1.2rem;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+}
+
+/* Custom Buttons */
+.btn-electric-lime {
   background-color: #D4EB00;
-  color: #120505;
-  font-weight: 700;
-  padding: 0.75rem 1.25rem;
-  border-radius: 6px;
+  color: #1A0707;
+  font-weight: 800;
+  padding: 0.85rem 1.6rem;
+  border-radius: 8px;
   border: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  transition: all 0.2s ease;
+  gap: 0.6rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.88rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 20px rgba(212, 235, 0, 0.25);
+}
+
+.btn-electric-lime:hover:not(:disabled) {
+  background-color: #E2F51A;
+  box-shadow: 0 0 25px rgba(212, 235, 0, 0.6);
+  transform: translateY(-2px);
+}
+
+.btn-electric-lime:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: grayscale(0.5);
+}
+
+.btn-trap-red {
+  background-color: rgba(255, 51, 51, 0.15);
+  color: #FF3333;
+  border: 1.5px solid #FF3333;
+  font-weight: 700;
+  padding: 0.75rem 1.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  transition: all 0.25s ease;
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
-.btn-lime:hover:not(:disabled) {
-  background-color: #E2F51A;
-  box-shadow: 0 0 15px rgba(212, 235, 0, 0.5);
-  transform: translateY(-1px);
-}
-
-.btn-lime:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-  filter: grayscale(0.6);
-}
-
-.btn-red {
+.btn-trap-red:hover:not(:disabled) {
   background-color: #FF3333;
   color: #FFFFFF;
-  font-weight: 700;
-  padding: 0.75rem 1.25rem;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.2s ease;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-}
-
-.btn-red:hover:not(:disabled) {
-  background-color: #FF5555;
-  box-shadow: 0 0 15px rgba(255, 51, 51, 0.5);
-}
-
-.btn-outline {
-  background: transparent;
-  color: #D4EB00;
-  border: 1px solid #D4EB00;
-  font-weight: 600;
-  padding: 0.75rem 1.25rem;
-  border-radius: 6px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.2s ease;
-  font-size: 0.85rem;
-}
-
-.btn-outline:hover:not(:disabled) {
-  background: rgba(212, 235, 0, 0.1);
-  box-shadow: 0 0 12px rgba(212, 235, 0, 0.3);
-}
-
-/* Code block */
-.code-block {
-  font-family: var(--font-mono);
-  background-color: #170505;
-  color: #E2E8F0;
-  padding: 0.9rem;
-  border-radius: 6px;
-  border: 1px solid #4A1A1A;
-  font-size: 0.8rem;
-  overflow-x: auto;
-  white-space: pre-wrap;
+  box-shadow: 0 0 20px rgba(255, 51, 51, 0.6);
+  transform: translateY(-2px);
 }
 
 /* Animations */
@@ -149,4 +163,48 @@ body {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse-slow {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+/* Utility Badges */
+.badge-lime {
+  background: rgba(212, 235, 0, 0.15);
+  color: #D4EB00;
+  border: 1px solid rgba(212, 235, 0, 0.4);
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.badge-red {
+  background: rgba(255, 51, 51, 0.2);
+  color: #FF3333;
+  border: 1px solid rgba(255, 51, 51, 0.5);
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Radar & Map Grid Styling */
+.radar-grid {
+  background-size: 20px 20px;
+  background-image: 
+    linear-gradient(to right, rgba(74, 26, 26, 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(74, 26, 26, 0.4) 1px, transparent 1px);
 }

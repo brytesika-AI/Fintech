@@ -1,83 +1,89 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  ShieldAlert, 
-  MapPin, 
-  Search, 
-  Cpu, 
-  CheckCircle2, 
+  Activity, 
+  Truck, 
+  MessageSquare, 
   AlertTriangle, 
-  FileText, 
-  RefreshCw,
-  TrendingUp,
-  Building2,
+  ShieldCheck, 
+  Play,
+  Server,
+  Radio,
   Lock,
+  RefreshCw,
+  Zap,
+  CheckCircle2,
+  Clock,
+  Terminal,
+  ShieldAlert,
   UserCheck,
-  DollarSign,
+  MapPin,
+  ChevronRight,
+  AlertOctagon,
+  FileCode,
   Layers,
-  ArrowRight
+  Globe,
+  Sliders,
+  Download,
+  Share2,
+  Navigation
 } from 'lucide-react';
 
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-
-// Leaflet custom marker icon
-const customMarkerIcon = new L.DivIcon({
-  className: 'custom-map-pin',
-  html: `<div style="background-color: #D4EB00; width: 16px; height: 16px; border-radius: 50%; border: 3px solid #120505; box-shadow: 0 0 12px #D4EB00;"></div>`,
-  iconSize: [16, 16],
-  iconAnchor: [8, 8]
-});
-
-// Mock Database State
-const fakeDB = {
-  marketData: [
-    { id: "SOW01", name: "Soweto", lat: -26.2485, lng: 27.8540, pop_est: 1200000, kazang_active: 3200, competitors: { Flash: 4100, Mukuru: 850 } },
-    { id: "ALX01", name: "Alexandra", lat: -26.1053, lng: 28.0969, pop_est: 500000, kazang_active: 1150, competitors: { Flash: 1800, Mukuru: 400 } },
-    { id: "ROO01", name: "Roodepoort", lat: -26.1558, lng: 27.8722, pop_est: 350000, kazang_active: 850, competitors: { Flash: 900, Mukuru: 150 } }
-  ],
-  competitorRates: {
-    "Flash": { vas_fee_pct: 2.5, cash_deposit_fee_zar: 15 },
-    "Mukuru": { vas_fee_pct: 3.0, cash_deposit_fee_zar: 20 },
-    "Kazang": { vas_fee_pct: 1.8, cash_deposit_fee_zar: 10 }
-  },
-  merchantRecords: [
-    { merchant_id: "M-1092", name: "Mandla Supermarket", location: "Soweto", current_provider: "Flash", monthly_vas_volume_zar: 150000, monthly_cash_deposits: 400 }
-  ]
-};
-
-const rawKYCOCRText = `[OCR SCAN] Owner: Sakhile Dlamini | ID: 8503125099087 | Address: 1245 Vilakazi St, Soweto | Status: Degraded/Blurry`;
-
-// API Credentials (loaded dynamically to maintain environment security & push protection)
-const HF_AUTH_TOKEN = import.meta.env.VITE_HF_TOKEN || ['hf_mYnLlwn', 'NvTeDqLKLFbqCZPfEUYTUDAFBgB'].join('');
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_KEY || ['AQ.Ab8RN6LSJ1IIEj3aj', 'RHgza5jT4K9xDh0nzw-MkEiPxvWEelclQ'].join('');
+const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 export default function App() {
-  // Left Column Tab State ('geo' or 'comp')
-  const [leftTab, setLeftTab] = useState('geo');
+  // Orchestration state
+  const [isOrchestrating, setIsOrchestrating] = useState(false);
+  const [activeStep, setActiveStep] = useState(0); // 0 = idle, 1 = Triage, 2 = Logistics, 3 = Comms
+  const [agentData, setAgentData] = useState([]); // [{ agent, action, status }, ...]
+  const [logs, setLogs] = useState([
+    `[06:36:01.002] SYSTEM: NOC Initialization complete. Node 'Roodepoort #EP-8842' online.`,
+    `[06:36:01.015] TELEMETRY: 24V PSU module fluctuation detected (18.2V -> 0.0V drop).`,
+    `[06:36:01.022] GOVERNANCE: AI-SRF Level 1 active. Sentinel monitor listening for telemetry events.`
+  ]);
 
-  // Competitive Analysis State (Gemini 1.5 Flash)
-  const [geminiLoading, setGeminiLoading] = useState(false);
-  const [geminiResult, setGeminiResult] = useState(null);
+  // Trap / Edge Case State
+  const [isTrapActive, setIsTrapActive] = useState(false);
+  const [showTrapModal, setShowTrapModal] = useState(false);
+  const [hitlActionTaken, setHitlActionTaken] = useState(null);
 
-  // FICA Compliance State (Hugging Face Qwen 2.5)
-  const [ficaLoading, setFicaLoading] = useState(false);
-  const [ficaResult, setFicaResult] = useState(null);
-  const [hitlRouted, setHitlRouted] = useState(false);
-  const [hitlModalOpen, setHitlModalOpen] = useState(false);
-  const [hitlNotes, setHitlNotes] = useState('');
+  // Helper to add timestamped terminal logs
+  const addLog = (msg) => {
+    const time = new Date().toISOString().split('T')[1].slice(0, 12);
+    setLogs((prev) => [...prev, `[${time}] ${msg}`]);
+  };
 
-  // --- Left Column Logic: Gemini Competitive Pitch Analysis ---
-  const runCompetitiveAnalysis = async () => {
-    setGeminiLoading(true);
-    setGeminiResult(null);
+  // Helper to reset dashboard state
+  const resetDashboard = () => {
+    setIsOrchestrating(false);
+    setActiveStep(0);
+    setAgentData([]);
+    setIsTrapActive(false);
+    setShowTrapModal(false);
+    setHitlActionTaken(null);
+    setLogs([
+      `[${new Date().toISOString().split('T')[1].slice(0, 12)}] SYSTEM: Dashboard state reset. Standing by for Roodepoort Node events.`,
+      `[${new Date().toISOString().split('T')[1].slice(0, 12)}] GOVERNANCE: AI-SRF Level 1 Active.`
+    ]);
+  };
 
-    const payloadPrompt = `Act as Lesaka's Chief Revenue AI. Analyze this JSON data: ${JSON.stringify({
-      competitorRates: fakeDB.competitorRates,
-      merchantRecords: fakeDB.merchantRecords
-    })}. Calculate exactly how much Mandla Supermarket pays in fees to Flash per month vs what they would pay Kazang. Draft a ruthless, 2-sentence personalized sales pitch for our relationship managers to use to win this merchant over.`;
+  // Trigger 1: Initiate Autonomous Resolution (Gemini API Call)
+  const initiateAutonomousResolution = async () => {
+    resetDashboard();
+    setIsOrchestrating(true);
+    addLog(`[ACTION] User initiated Autonomous Resolution for downed EasyPay terminal in Roodepoort Node.`);
+    addLog(`[ORCHESTRATOR] Sending multi-agent prompt to Google AI Studio (Gemini 1.5 Flash)...`);
+
+    const payloadPrompt = `Act as a Multi-Agent Orchestrator. Simulate a real-time, 3-step resolution for a downed EasyPay terminal in Roodepoort. 
+Agent 1 (Triage) identifies a power-supply failure. 
+Agent 2 (Logistics) checks inventory and reroutes a field tech named Sipho who is 5km away. 
+Agent 3 (Comms) drafts a WhatsApp message to the merchant. 
+Format the output strictly as a JSON array of 3 objects: [{ "agent": "Triage", "action": "...", "status": "Complete" }, { "agent": "Logistics", "action": "...", "status": "Complete" }, { "agent": "Comms", "action": "...", "status": "Complete" }]`;
+
+    let parsedResults = null;
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      const response = await fetch(GEMINI_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -87,497 +93,630 @@ export default function App() {
 
       const data = await response.json();
       if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-        setGeminiResult(data.candidates[0].content.parts[0].text);
-      } else {
-        throw new Error("Gemini response structure fallback executed.");
+        const rawText = data.candidates[0].content.parts[0].text;
+        addLog(`[GEMINI RESPONSE RECEIVED] Raw output length: ${rawText.length} chars.`);
+        
+        // Clean markdown backticks if present
+        const cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        try {
+          parsedResults = JSON.parse(cleanText);
+        } catch (e) {
+          addLog(`[WARN] Direct JSON parse error. Extracting JSON array fallback...`);
+          const match = cleanText.match(/\[[\s\S]*\]/);
+          if (match) {
+            parsedResults = JSON.parse(match[0]);
+          }
+        }
       }
     } catch (err) {
-      console.error("Gemini Competitive Analysis Error:", err);
-      // Enterprise Fallback Pitch & Fee Breakdown
-      setGeminiResult(
-`### Lesaka Chief Revenue AI Analysis & Sales Pitch
-
-**Exact Fee Breakdown for Mandla Supermarket:**
-- **Current Flash Monthly Fee:** R9,750 (R3,750 VAS fee @ 2.5% + R6,000 cash deposit fees for 400 deposits @ R15).
-- **Proposed Kazang Monthly Fee:** R6,700 (R2,700 VAS fee @ 1.8% + R4,000 cash deposit fees for 400 deposits @ R10).
-- **Net Monthly Savings for Merchant:** **R3,050 / month** (R36,600 annual profit back to Mandla Supermarket).
-
-**Ruthless Relationship Manager Sales Pitch:**
-*"Mandla, Flash is bleeding your supermarket R3,050 every single month in inflated VAS transaction commissions and cash deposit fees. Switch to Kazang today to instantly reclaim R36,600 in net annual profits with zero downtime and guaranteed same-day float settlement."*`
-      );
-    } finally {
-      setGeminiLoading(false);
+      addLog(`[API ERROR] ${err.message}. Engaging fallback agent response pipeline.`);
     }
+
+    // Fallback if API returned non-JSON or encountered error
+    if (!parsedResults || !Array.isArray(parsedResults) || parsedResults.length < 3) {
+      parsedResults = [
+        {
+          agent: "Triage",
+          action: "Telemetry scan detected voltage drop to 0.0V at Roodepoort EasyPay Node (#EP-8842). Automated diagnostic confirms primary 24V PSU module internal short.",
+          status: "Complete"
+        },
+        {
+          agent: "Logistics",
+          action: "Verified PSU replacement stock (14 units) at Midrand Hub. Rerouted Senior Technician Sipho (ID: TECH-409, 5.2km distance, ETA 12m).",
+          status: "Complete"
+        },
+        {
+          agent: "Comms",
+          action: "Drafted WhatsApp alert to Roodepoort Supermarket Manager: 'Lesaka Ops update: Tech Sipho is en route to replace PSU on EasyPay terminal #8842. ETA 12 mins.'",
+          status: "Complete"
+        }
+      ];
+    }
+
+    // Sequential 1500ms step-by-step rendering
+    // Step 1: Agent 1 (Triage)
+    setActiveStep(1);
+    setAgentData([parsedResults[0]]);
+    addLog(`[AGENT 1: TRIAGE] ${parsedResults[0].action}`);
+
+    // Wait 1500ms -> Step 2: Agent 2 (Logistics)
+    setTimeout(() => {
+      setActiveStep(2);
+      setAgentData([parsedResults[0], parsedResults[1]]);
+      addLog(`[AGENT 2: LOGISTICS] ${parsedResults[1].action}`);
+
+      // Wait 1500ms -> Step 3: Agent 3 (Comms)
+      setTimeout(() => {
+        setActiveStep(3);
+        setAgentData([parsedResults[0], parsedResults[1], parsedResults[2]]);
+        addLog(`[AGENT 3: COMMS] ${parsedResults[2].action}`);
+        addLog(`[ORCHESTRATION COMPLETE] 3-step autonomous resolution executed successfully.`);
+        setIsOrchestrating(false);
+      }, 1500);
+    }, 1500);
   };
 
-  // --- Right Column Logic: Hugging Face FICA Extraction ---
-  const executeAgenticFICA = async () => {
-    setFicaLoading(true);
-    setFicaResult(null);
+  // Trigger 2: Governance Trap - Simulate Edge Case (Device Tampering)
+  const triggerGovernanceTrap = () => {
+    resetDashboard();
+    setIsOrchestrating(true);
+    setIsTrapActive(true);
+    addLog(`[CRITICAL SECURITY EVENT] User triggered Edge Case: Device Tampering at Roodepoort Cash Connect Vault!`);
+    addLog(`[AGENT 1: TRIAGE] Intercepting telemetry: Unauthorized physical access detected!`);
 
-    const promptText = `Extract Spaza Name, Owner ID, and Address from: ${rawKYCOCRText}. Return ONLY JSON: {"spaza_name": "Sakhile Tuckshop", "owner_id": "8503125099087", "address": "1245 Vilakazi St, Soweto", "confidence_score": 65}.`;
+    const triageAction = {
+      agent: "Triage",
+      action: "CRITICAL: Physical tamper sensor tripped on Cash Connect Vault #CC-8842 (Roodepoort Node). Seismic vibration spike & door force breach detected!",
+      status: "FLAGGED"
+    };
 
-    try {
-      const response = await fetch('https://api-inference.huggingface.co/models/Qwen/Qwen2.5-7B-Instruct', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${HF_AUTH_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          inputs: promptText,
-          parameters: { max_new_tokens: 300, return_full_text: false }
-        })
-      });
+    setActiveStep(1);
+    setAgentData([triageAction]);
 
-      const rawData = await response.text();
-      let parsed = null;
-      try {
-        const match = rawData.match(/\{[\s\S]*?\}/);
-        if (match) parsed = JSON.parse(match[0]);
-      } catch (e) {
-        console.warn("HF parse notice:", e);
-      }
+    // THE TRAP: System halts BEFORE Agent 2 can dispatch!
+    setTimeout(() => {
+      addLog(`[sage_srai_Flag TRIGGERED] LETHAL RISK EXCEPTION! Halting Agent 2 (Logistics) dispatch immediately.`);
+      addLog(`[GOVERNANCE INTERCEPT] AI-SRF protocols engaged. Mandatory HITL Approval required.`);
+      
+      setIsOrchestrating(false);
+      setShowTrapModal(true);
+    }, 800);
+  };
 
-      if (!parsed || !parsed.spaza_name) {
-        parsed = {
-          spaza_name: "Sakhile Tuckshop",
-          owner_id: "8503125099087",
-          address: "1245 Vilakazi St, Soweto",
-          confidence_score: 65
-        };
-      }
-
-      // MANDATORY GOVERNANCE TRAP: Force confidence_score to 65% due to document blur
-      parsed.confidence_score = 65;
-      setFicaResult(parsed);
-    } catch (err) {
-      console.error("HF Qwen API Error:", err);
-      setFicaResult({
-        spaza_name: "Sakhile Tuckshop",
-        owner_id: "8503125099087",
-        address: "1245 Vilakazi St, Soweto",
-        confidence_score: 65
-      });
-    } finally {
-      setFicaLoading(false);
-    }
+  // Helper to export logs as JSON/Text file
+  const exportAuditLogs = () => {
+    const blob = new Blob([logs.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `noc_audit_log_${new Date().toISOString().slice(0, 10)}.log`;
+    link.click();
   };
 
   return (
-    <div style={{ backgroundColor: '#341212', color: '#FFFFFF', minHeight: '100vh', paddingBottom: '2.5rem' }}>
+    <div className={`min-h-screen flex flex-col bg-[#341212] text-white selection:bg-[#D4EB00] selection:text-[#1A0707] ${isTrapActive ? 'flash-screen-border' : ''}`}>
       
-      {/* STICKY HEADER */}
-      <header style={{
-        backgroundColor: '#341212',
-        borderBottom: '1px solid #4A1A1A',
-        position: 'sticky', top: 0, zIndex: 1000,
-        padding: '0.9rem 2rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ 
-            width: '40px', height: '40px', backgroundColor: '#D4EB00', borderRadius: '8px', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#341212' 
-          }}>
-            <Cpu size={24} strokeWidth={2.5} />
+      {/* TOP HEADER SECTION */}
+      <header className="bg-[#240C0C] border-b border-[#4A1A1A] px-6 py-4 sticky top-0 z-30 shadow-2xl">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          
+          {/* Brand & Title */}
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-[#341212] border border-[#4A1A1A] flex items-center justify-center text-[#D4EB00] shadow-inner">
+              <Layers className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-extrabold tracking-tight text-white">
+                  BryteSika Fintech: <span className="text-[#D4EB00]">Wave 3 Autonomous Ops</span>
+                </h1>
+                <span className="badge-lime flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-[#D4EB00] animate-pulse"></span>
+                  NOC Active
+                </span>
+              </div>
+              <p className="text-xs text-[#CCCCCC] mt-0.5 font-medium">
+                Lesaka Zero-Touch Autonomous Multi-Agent Orchestrator • Cloudflare Edge Production Build
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 style={{ fontSize: '1.2rem', fontWeight: '800', margin: 0, color: '#FFFFFF', letterSpacing: '-0.01em' }}>
-              BryteSika Fintech <span style={{ color: '#D4EB00', fontWeight: '600' }}>| Command Center</span>
-            </h1>
-            <p style={{ fontSize: '0.78rem', color: '#CCCCCC', margin: 0 }}>
-              Lesaka Merchant Operating System & Compliance Governance (LSAK/LSK)
-            </p>
-          </div>
-        </div>
 
-        {/* System Badges */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#CCCCCC' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#D4EB00' }}></span>
-            Cloudflare Edge Live
+          {/* Primary Action Button (Electric Lime #D4EB00) */}
+          <div className="flex items-center gap-3">
+            {isOrchestrating && (
+              <span className="text-xs font-mono text-[#D4EB00] flex items-center gap-1.5 bg-[#341212] px-3 py-1.5 rounded-lg border border-[#4A1A1A]">
+                <RefreshCw className="w-4 h-4 animate-spin text-[#D4EB00]" />
+                Orchestrating Step {activeStep}/3...
+              </span>
+            )}
+            
+            <button
+              onClick={initiateAutonomousResolution}
+              disabled={isOrchestrating || showTrapModal}
+              className="btn-electric-lime"
+            >
+              {isOrchestrating ? (
+                <>
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  Executing Agentic Workflow...
+                </>
+              ) : (
+                <>
+                  <Play className="w-5 h-5 fill-current" />
+                  Initiate Autonomous Resolution (Roodepoort Node)
+                </>
+              )}
+            </button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#CCCCCC' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#38BDF8' }}></span>
-            Qwen 2.5-7B Compliance
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#CCCCCC' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#A855F7' }}></span>
-            Gemini 1.5 Flash Revenue AI
-          </div>
+
         </div>
       </header>
 
-      {/* 2-COLUMN DASHBOARD GRID */}
-      <main style={{ maxWidth: '1440px', margin: '1.5rem auto 0', padding: '0 1.5rem' }}>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+      {/* NODE TELEMETRY & GIS ROUTE RADAR BANNER */}
+      <section className="bg-[#1D0909] border-b border-[#4A1A1A] px-6 py-4">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-mono">
           
-          {/* ======================================================== */}
-          {/* LEFT COLUMN: TABBED INTERFACE (GEO-EXPANSION & COMPETITIVE) */}
-          {/* ======================================================== */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            
-            {/* TABS HEADER */}
-            <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid #4A1A1A', paddingBottom: '0.5rem' }}>
-              <button 
-                onClick={() => setLeftTab('geo')}
-                style={{
-                  padding: '0.6rem 1.25rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700',
-                  border: leftTab === 'geo' ? '1px solid #D4EB00' : '1px solid transparent',
-                  backgroundColor: leftTab === 'geo' ? 'rgba(212, 235, 0, 0.15)' : 'transparent',
-                  color: leftTab === 'geo' ? '#D4EB00' : '#CCCCCC', cursor: 'pointer', transition: 'all 0.2s',
-                  display: 'flex', alignItems: 'center', gap: '0.5rem'
-                }}
-              >
-                <MapPin size={16} /> Tab 1: Geo-Expansion
-              </button>
-              
-              <button 
-                onClick={() => setLeftTab('comp')}
-                style={{
-                  padding: '0.6rem 1.25rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700',
-                  border: leftTab === 'comp' ? '1px solid #D4EB00' : '1px solid transparent',
-                  backgroundColor: leftTab === 'comp' ? 'rgba(212, 235, 0, 0.15)' : 'transparent',
-                  color: leftTab === 'comp' ? '#D4EB00' : '#CCCCCC', cursor: 'pointer', transition: 'all 0.2s',
-                  display: 'flex', alignItems: 'center', gap: '0.5rem'
-                }}
-              >
-                <TrendingUp size={16} /> Tab 2: Competitive Analysis
-              </button>
+          <div className="bg-[#240C0C] border border-[#4A1A1A] rounded-xl p-3.5 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-[#998888] block text-[11px]">TARGET NODE</span>
+              <strong className="text-white text-sm block">Roodepoort #EP-8842</strong>
             </div>
-
-            {/* TAB 1 CONTENT: GEO-EXPANSION MAP */}
-            {leftTab === 'geo' && (
-              <div style={{ backgroundColor: '#240C0C', border: '1px solid #4A1A1A', borderRadius: '12px', padding: '1.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
-                    Township POS Expansion Map
-                  </h3>
-                  <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#D4EB00', backgroundColor: 'rgba(212, 235, 0, 0.12)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                    CARTO DARK TILES
-                  </span>
-                </div>
-
-                <div style={{ height: '380px', width: '100%' }}>
-                  <MapContainer 
-                    center={[-26.1558, 28.0000]} 
-                    zoom={10} 
-                    scrollWheelZoom={false}
-                    style={{ height: '100%', width: '100%', borderRadius: '8px' }}
-                  >
-                    <TileLayer
-                      url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                      attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                    />
-                    {fakeDB.marketData.map((spot) => (
-                      <Marker key={spot.id} position={[spot.lat, spot.lng]} icon={customMarkerIcon}>
-                        <Popup>
-                          <div style={{ padding: '0.2rem', fontFamily: 'Inter, sans-serif' }}>
-                            <h4 style={{ margin: '0 0 0.4rem 0', color: '#D4EB00', fontSize: '0.9rem', fontWeight: '800' }}>
-                              {spot.name} Township
-                            </h4>
-                            <div style={{ fontSize: '0.78rem', color: '#CCCCCC', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                              <div>Est. Population: <strong style={{ color: '#FFF' }}>{spot.pop_est.toLocaleString()}</strong></div>
-                              <div>Kazang Active POS: <strong style={{ color: '#D4EB00' }}>{spot.kazang_active}</strong></div>
-                              <div>Flash Competitor: <strong style={{ color: '#FF3333' }}>{spot.competitors.Flash}</strong></div>
-                              <div>Mukuru Footprint: <strong style={{ color: '#FFF' }}>{spot.competitors.Mukuru}</strong></div>
-                            </div>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    ))}
-                  </MapContainer>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 2 CONTENT: COMPETITIVE ANALYSIS (GOOGLE AI STUDIO) */}
-            {leftTab === 'comp' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                
-                <div style={{ backgroundColor: '#240C0C', border: '1px solid #4A1A1A', borderRadius: '12px', padding: '1.25rem' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#FFFFFF', marginBottom: '0.75rem' }}>
-                    Merchant Record & Competitor Rate Matrix
-                  </h3>
-
-                  {/* Competitor Rates Table */}
-                  <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
-                      <thead>
-                        <tr style={{ backgroundColor: '#170505', color: '#D4EB00', borderBottom: '1px solid #4A1A1A' }}>
-                          <th style={{ padding: '0.6rem' }}>Provider</th>
-                          <th style={{ padding: '0.6rem' }}>VAS Fee %</th>
-                          <th style={{ padding: '0.6rem' }}>Cash Deposit Fee (ZAR)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(fakeDB.competitorRates).map(([provider, rates]) => (
-                          <tr key={provider} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', backgroundColor: provider === 'Kazang' ? 'rgba(212, 235, 0, 0.08)' : 'transparent' }}>
-                            <td style={{ padding: '0.6rem', fontWeight: '700', color: provider === 'Kazang' ? '#D4EB00' : '#FFF' }}>
-                              {provider} {provider === 'Kazang' && '(Lesaka)'}
-                            </td>
-                            <td style={{ padding: '0.6rem', color: '#CCCCCC' }}>{rates.vas_fee_pct}%</td>
-                            <td style={{ padding: '0.6rem', color: '#CCCCCC' }}>R{rates.cash_deposit_fee_zar}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Target Merchant Details */}
-                  {fakeDB.merchantRecords.map((m) => (
-                    <div key={m.merchant_id} style={{ backgroundColor: '#170505', border: '1px solid #4A1A1A', borderRadius: '8px', padding: '0.85rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#D4EB00', fontWeight: '800', marginBottom: '0.4rem' }}>
-                        <span>Target Merchant: {m.name} ({m.merchant_id})</span>
-                        <span style={{ color: '#FF3333' }}>Current Provider: {m.current_provider}</span>
-                      </div>
-                      <div style={{ color: '#CCCCCC', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                        <div>Monthly VAS Vol: <strong>R{m.monthly_vas_volume_zar.toLocaleString()}</strong></div>
-                        <div>Monthly Cash Deposits: <strong>{m.monthly_cash_deposits} transactions</strong></div>
-                      </div>
-                    </div>
-                  ))}
-
-                  <button 
-                    onClick={runCompetitiveAnalysis}
-                    disabled={geminiLoading}
-                    className="btn-lime"
-                    style={{ width: '100%', justifyContent: 'center' }}
-                  >
-                    {geminiLoading ? (
-                      <>
-                        <RefreshCw size={16} className="animate-spin" /> Analyzing Gemini 1.5 Revenue AI...
-                      </>
-                    ) : (
-                      <>
-                        <TrendingUp size={16} /> Run Agentic Competitive Analysis (Google AI Studio)
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Gemini Output Container */}
-                {geminiResult && (
-                  <div style={{ 
-                    backgroundColor: '#240C0C', 
-                    border: '2px solid #D4EB00', 
-                    borderRadius: '12px', 
-                    padding: '1.25rem',
-                    boxShadow: '0 0 20px rgba(212, 235, 0, 0.25)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', borderBottom: '1px solid rgba(212, 235, 0, 0.3)', paddingBottom: '0.5rem' }}>
-                      <TrendingUp size={18} color="#D4EB00" />
-                      <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#D4EB00', margin: 0, textTransform: 'uppercase' }}>
-                        Lesaka Chief Revenue AI Sales Analysis & Pitch
-                      </h3>
-                    </div>
-
-                    <div style={{ fontSize: '0.84rem', color: '#CCCCCC', lineHeight: '1.6', whiteSpace: 'pre-line' }}>
-                      {geminiResult}
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            )}
-
+            <Server className="w-6 h-6 text-[#D4EB00]" />
           </div>
 
-          {/* ======================================================== */}
-          {/* RIGHT COLUMN: FICA COMPLIANCE & GOVERNANCE (HUGGING FACE) */}
-          {/* ======================================================== */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="bg-[#240C0C] border border-[#4A1A1A] rounded-xl p-3.5 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-[#998888] block text-[11px]">TELEMETRY FAULT</span>
+              <strong className={isTrapActive ? "text-[#FF3333] font-bold text-sm block" : "text-[#D4EB00] font-bold text-sm block"}>
+                {isTrapActive ? "VAULT PHYSICAL TAMPER" : (activeStep > 0 ? "24V PSU SHORT FAULT" : "VOLTAGE FLUCTUATION")}
+              </strong>
+            </div>
+            <Radio className={`w-6 h-6 ${isTrapActive ? 'text-[#FF3333] animate-pulse' : 'text-[#D4EB00]'}`} />
+          </div>
+
+          <div className="bg-[#240C0C] border border-[#4A1A1A] rounded-xl p-3.5 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-[#998888] block text-[11px]">FIELD SPECIALIST</span>
+              <strong className="text-white text-sm block">Sipho (TECH-409 • 5.2km)</strong>
+            </div>
+            <Navigation className="w-6 h-6 text-[#D4EB00]" />
+          </div>
+
+          <div className="bg-[#240C0C] border border-[#4A1A1A] rounded-xl p-3.5 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-[#998888] block text-[11px]">AI-SRF PROTOCOL</span>
+              <strong className={isTrapActive ? "text-[#FF3333] text-sm block font-bold" : "text-emerald-400 text-sm block font-bold"}>
+                {isTrapActive ? "LEVEL 3 HITL OVERRIDE" : "LEVEL 1 AUTONOMOUS"}
+              </strong>
+            </div>
+            <ShieldCheck className={`w-6 h-6 ${isTrapActive ? 'text-[#FF3333]' : 'text-emerald-400'}`} />
+          </div>
+
+        </div>
+      </section>
+
+      {/* MAIN CONTENT AREA */}
+      <main className={`flex-1 max-w-7xl w-full mx-auto p-6 space-y-6 ${showTrapModal ? 'pointer-events-none opacity-40 blur-[1px]' : ''}`}>
+
+        {/* 3-COLUMN NOC ORCHESTRATION LAYOUT */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* COLUMN 1: AGENT 1 - TRIAGE & TELEMETRY */}
+          <div className={`bg-[#240C0C] border border-[#4A1A1A] rounded-xl p-5 flex flex-col justify-between transition-all duration-300 ${
+            activeStep === 1 && !isTrapActive ? 'active-column-glow' : ''
+          } ${isTrapActive ? 'alert-column-glow' : ''}`}>
             
-            <div style={{ backgroundColor: '#240C0C', border: '1px solid #4A1A1A', borderRadius: '12px', padding: '1.25rem' }}>
-              
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <ShieldAlert size={20} color="#D4EB00" />
-                  <h2 style={{ fontSize: '1rem', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
-                    FICA COMPLIANCE & GOVERNANCE
-                  </h2>
+            <div>
+              {/* Column Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-[#4A1A1A] mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#341212] border border-[#4A1A1A] flex items-center justify-center text-[#D4EB00]">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white leading-tight">
+                      Agent 1: Triage & Telemetry
+                    </h2>
+                    <p className="text-[11px] text-[#CCCCCC]">Hardware Diagnostics & Anomaly Detection</p>
+                  </div>
                 </div>
-                <span style={{ fontSize: '0.7rem', fontWeight: '700', backgroundColor: 'rgba(255, 51, 51, 0.15)', color: '#FF3333', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                  POPIA SAFE INGESTION
-                </span>
-              </div>
-
-              <h3 style={{ fontSize: '0.85rem', fontWeight: '700', color: '#CCCCCC', marginBottom: '0.5rem' }}>
-                Simulated OCR Document Stream:
-              </h3>
-
-              <div className="code-block" style={{ marginBottom: '1rem', borderLeft: '3px solid #D4EB00' }}>
-                {rawKYCOCRText}
-              </div>
-
-              <button 
-                onClick={executeAgenticFICA}
-                disabled={ficaLoading}
-                className="btn-lime"
-                style={{ width: '100%', justifyContent: 'center' }}
-              >
-                {ficaLoading ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin" /> Executing Qwen 2.5-7B FICA Extraction...
-                  </>
-                ) : (
-                  <>
-                    <FileText size={16} /> Execute Agentic FICA Extraction (Hugging Face)
-                  </>
+                {activeStep >= 1 && (
+                  <span className={isTrapActive ? "badge-red" : "badge-lime"}>
+                    {isTrapActive ? "FLAGGED" : (activeStep === 1 ? "Active" : "Complete")}
+                  </span>
                 )}
-              </button>
+              </div>
 
+              {/* Node Sensor Metrics Box */}
+              <div className="bg-[#180707] border border-[#4A1A1A] rounded-lg p-3.5 mb-4 font-mono text-xs space-y-2">
+                <div className="flex justify-between items-center text-[#CCCCCC]">
+                  <span>Supply Voltage:</span>
+                  <span className={isTrapActive ? "text-[#FF3333] font-bold" : "text-[#D4EB00] font-bold"}>
+                    {isTrapActive ? "0.0V (Breached)" : (activeStep > 0 ? "0.0V (Short Fault)" : "23.4V (Fluctuating)")}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-[#CCCCCC]">
+                  <span>Vault Enclosure:</span>
+                  <span className={isTrapActive ? "text-[#FF3333] font-bold animate-pulse" : "text-emerald-400 font-bold"}>
+                    {isTrapActive ? "TAMPER SENSOR BREACHED" : "LOCKED & SECURE"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-[#CCCCCC]">
+                  <span>Diagnostic Code:</span>
+                  <span className="text-white font-bold">
+                    {isTrapActive ? "ERR-VAULT-PHYSICAL-ACCESS" : (activeStep > 0 ? "ERR-PSU-FAIL-24V" : "STANDBY")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Agent Output Card */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[#CCCCCC]">Agentic Action Log:</h3>
+                
+                {agentData[0] ? (
+                  <div className={`p-4 rounded-lg text-xs leading-relaxed font-mono ${
+                    isTrapActive ? 'bg-red-950/40 border border-[#FF3333] text-[#FF3333]' : 'bg-[#150606] border border-[#4A1A1A] text-[#CCCCCC]'
+                  }`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Terminal className={`w-4 h-4 ${isTrapActive ? 'text-[#FF3333]' : 'text-[#D4EB00]'}`} />
+                      <span className="font-bold text-white">Triage Agent Output:</span>
+                    </div>
+                    <p>{agentData[0].action}</p>
+                  </div>
+                ) : (
+                  <div className="bg-[#150606] border border-dashed border-[#4A1A1A] rounded-lg p-6 text-center text-xs text-[#998888]">
+                    Awaiting Agent 1 trigger...
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* FICA Extraction Output & Governance Trap */}
-            {ficaResult && (
-              <div style={{ backgroundColor: '#240C0C', border: '1px solid #4A1A1A', borderRadius: '12px', padding: '1.25rem' }}>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#CCCCCC' }}>
-                    Qwen 2.5-7B JSON Struct Output:
-                  </span>
-                  <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#FF3333' }}>
-                    Confidence: {ficaResult.confidence_score}% (&lt;90% Threshold)
-                  </span>
-                </div>
+            {/* Footer status pill */}
+            <div className="pt-4 border-t border-[#4A1A1A] mt-4 flex items-center justify-between text-xs text-[#CCCCCC]">
+              <span>Triage Engine:</span>
+              <span className="font-mono text-[#D4EB00]">Sentinel-v3.4</span>
+            </div>
+          </div>
 
-                <div className="code-block" style={{ marginBottom: '1rem', borderLeft: '3px solid #FF3333' }}>
-{JSON.stringify({
-  spaza_name: ficaResult.spaza_name,
-  owner_id: ficaResult.owner_id,
-  address: ficaResult.address,
-  confidence_score: ficaResult.confidence_score
-}, null, 2)}
-                </div>
-
-                {/* RESPONSIBLE AI GOVERNANCE TRAP */}
-                <div style={{ 
-                  backgroundColor: '#FF3333', 
-                  color: '#FFFFFF', 
-                  borderRadius: '8px', 
-                  padding: '1rem', 
-                  marginBottom: '1rem',
-                  boxShadow: '0 0 15px rgba(255, 51, 51, 0.4)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
-                    <AlertTriangle size={22} style={{ flexShrink: 0, marginTop: '2px' }} />
-                    <div>
-                      <div style={{ 
-                        display: 'inline-block', backgroundColor: '#1A0505', color: '#FF3333', 
-                        fontSize: '0.7rem', fontWeight: '900', padding: '0.2rem 0.5rem', 
-                        borderRadius: '4px', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.04em'
-                      }}>
-                        [sage_srai_Flag TRIGGERED - HIGH POPIA RISK]
-                      </div>
-                      <p style={{ fontSize: '0.82rem', fontWeight: '700', margin: 0, lineHeight: '1.4' }}>
-                        Auto-Approve Disabled. Confidence Score (65%) is below 90% threshold. Reason: Blurry proof of residence.
-                      </p>
-                    </div>
+          {/* COLUMN 2: AGENT 2 - LOGISTICS & DISPATCH */}
+          <div className={`bg-[#240C0C] border border-[#4A1A1A] rounded-xl p-5 flex flex-col justify-between transition-all duration-300 ${
+            activeStep === 2 && !isTrapActive ? 'active-column-glow' : ''
+          }`}>
+            
+            <div>
+              {/* Column Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-[#4A1A1A] mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#341212] border border-[#4A1A1A] flex items-center justify-center text-[#D4EB00]">
+                    <Truck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white leading-tight">
+                      Agent 2: Logistics & Dispatch
+                    </h2>
+                    <p className="text-[11px] text-[#CCCCCC]">Field Force Rerouting & Stock Allocation</p>
                   </div>
                 </div>
+                {activeStep >= 2 && !isTrapActive && (
+                  <span className="badge-lime">
+                    {activeStep === 2 ? "Active" : "Complete"}
+                  </span>
+                )}
+                {isTrapActive && (
+                  <span className="badge-red flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> HALTED
+                  </span>
+                )}
+              </div>
 
-                {/* ACTION BUTTONS */}
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <button 
-                    disabled={true}
-                    className="btn-lime"
-                    title="Auto-Approve Disabled due to POPIA Governance Trap (<90% threshold)"
-                    style={{ flex: 1, opacity: 0.3, cursor: 'not-allowed', backgroundColor: '#555555', color: '#888888', border: 'none' }}
-                  >
-                    <Lock size={16} /> Auto-Approve (Disabled)
-                  </button>
-
-                  <button 
-                    onClick={() => setHitlModalOpen(true)}
-                    className="btn-red"
-                    style={{ flex: 1, justifyContent: 'center' }}
-                  >
-                    <UserCheck size={16} /> Route to Human-In-The-Loop (HITL) Queue
-                  </button>
+              {/* Field Technician Card */}
+              <div className="bg-[#180707] border border-[#4A1A1A] rounded-lg p-3.5 mb-4 font-mono text-xs space-y-2">
+                <div className="flex justify-between items-center text-[#CCCCCC]">
+                  <span>Field Specialist:</span>
+                  <span className="text-white font-bold">Sipho (TECH-409)</span>
                 </div>
+                <div className="flex justify-between items-center text-[#CCCCCC]">
+                  <span>Current Distance:</span>
+                  <span className="text-[#D4EB00] font-bold">5.2 km away</span>
+                </div>
+                <div className="flex justify-between items-center text-[#CCCCCC]">
+                  <span>Required Inventory:</span>
+                  <span className="text-white font-bold">PSU-24V Module (Midrand Stock: 14)</span>
+                </div>
+              </div>
 
-                {hitlRouted && (
-                  <div style={{ marginTop: '0.75rem', padding: '0.6rem', backgroundColor: 'rgba(56, 189, 248, 0.15)', border: '1px solid #38BDF8', borderRadius: '6px', color: '#38BDF8', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <CheckCircle2 size={16} /> HITL Queue Dispatched: Senior Compliance Officer ticket created.
+              {/* Agent Output Card */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[#CCCCCC]">Agentic Action Log:</h3>
+                
+                {isTrapActive ? (
+                  <div className="bg-red-950/20 border border-[#FF3333] rounded-lg p-4 text-xs font-mono text-[#FF3333] space-y-2">
+                    <div className="flex items-center gap-2 font-bold text-[#FF3333]">
+                      <AlertOctagon className="w-4 h-4" />
+                      <span>DISPATCH HALTED BY GOVERNANCE TRAP</span>
+                    </div>
+                    <p className="text-[#CCCCCC]">
+                      Agent 2 dispatch execution was intercepted and aborted before technician Sipho could be dispatched. Physical tampering hazard requires Level 3 Security intervention.
+                    </p>
+                  </div>
+                ) : agentData[1] ? (
+                  <div className="bg-[#150606] border border-[#4A1A1A] rounded-lg p-4 text-xs leading-relaxed font-mono text-[#CCCCCC]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Truck className="w-4 h-4 text-[#D4EB00]" />
+                      <span className="font-bold text-white">Logistics Agent Output:</span>
+                    </div>
+                    <p>{agentData[1].action}</p>
+                  </div>
+                ) : (
+                  <div className="bg-[#150606] border border-dashed border-[#4A1A1A] rounded-lg p-6 text-center text-xs text-[#998888]">
+                    Awaiting Agent 2 trigger...
                   </div>
                 )}
-
               </div>
-            )}
+            </div>
 
+            {/* Footer status pill */}
+            <div className="pt-4 border-t border-[#4A1A1A] mt-4 flex items-center justify-between text-xs text-[#CCCCCC]">
+              <span>Field Ops Router:</span>
+              <span className="font-mono text-[#D4EB00]">OptiRoute-v2.1</span>
+            </div>
+          </div>
+
+          {/* COLUMN 3: AGENT 3 - MERCHANT COMMS */}
+          <div className={`bg-[#240C0C] border border-[#4A1A1A] rounded-xl p-5 flex flex-col justify-between transition-all duration-300 ${
+            activeStep === 3 && !isTrapActive ? 'active-column-glow' : ''
+          }`}>
+            
+            <div>
+              {/* Column Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-[#4A1A1A] mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#341212] border border-[#4A1A1A] flex items-center justify-center text-[#D4EB00]">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white leading-tight">
+                      Agent 3: Merchant Comms
+                    </h2>
+                    <p className="text-[11px] text-[#CCCCCC]">Automated Merchant Engagement & WhatsApp</p>
+                  </div>
+                </div>
+                {activeStep === 3 && !isTrapActive && (
+                  <span className="badge-lime">Complete</span>
+                )}
+                {isTrapActive && (
+                  <span className="badge-red">Blocked</span>
+                )}
+              </div>
+
+              {/* Merchant Contact Meta */}
+              <div className="bg-[#180707] border border-[#4A1A1A] rounded-lg p-3.5 mb-4 font-mono text-xs space-y-2">
+                <div className="flex justify-between items-center text-[#CCCCCC]">
+                  <span>Merchant:</span>
+                  <span className="text-white font-bold">Roodepoort Supermarket</span>
+                </div>
+                <div className="flex justify-between items-center text-[#CCCCCC]">
+                  <span>Channel:</span>
+                  <span className="text-emerald-400 font-bold">WhatsApp Business Gateway</span>
+                </div>
+                <div className="flex justify-between items-center text-[#CCCCCC]">
+                  <span>Queue Status:</span>
+                  <span className="text-white font-bold">
+                    {isTrapActive ? "BLOCKED BY SAFETY FLAG" : (activeStep === 3 ? "DELIVERED" : "PENDING")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Agent Output / WhatsApp Preview */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[#CCCCCC]">WhatsApp Draft Preview:</h3>
+                
+                {agentData[2] ? (
+                  <div className="bg-[#0b141a] border border-[#128C7E] rounded-lg p-4 text-xs font-sans text-white shadow-lg space-y-2">
+                    <div className="flex items-center justify-between border-b border-emerald-900 pb-2 text-[11px] text-emerald-400 font-semibold">
+                      <span>Lesaka Merchant Support</span>
+                      <span>WhatsApp Verified</span>
+                    </div>
+                    <p className="leading-relaxed bg-[#111b21] p-3 rounded-lg border border-emerald-900/50 text-[#E9EDEF]">
+                      "{agentData[2].action}"
+                    </p>
+                    <div className="text-[10px] text-emerald-500 text-right font-mono">
+                      ✓✓ Delivered • Automated Ops
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-[#150606] border border-dashed border-[#4A1A1A] rounded-lg p-6 text-center text-xs text-[#998888]">
+                    Awaiting Agent 3 draft...
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer status pill */}
+            <div className="pt-4 border-t border-[#4A1A1A] mt-4 flex items-center justify-between text-xs text-[#CCCCCC]">
+              <span>Comms Engine:</span>
+              <span className="font-mono text-[#D4EB00]">WhatsApp API v18.0</span>
+            </div>
           </div>
 
         </div>
 
-        {/* HITL AUDITOR MODAL */}
-        {hitlModalOpen && (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1rem'
-          }}>
-            <div style={{ backgroundColor: '#240C0C', border: '2px solid #FF3333', borderRadius: '12px', maxWidth: '550px', width: '100%', padding: '1.5rem', boxShadow: '0 0 25px rgba(255,51,51,0.4)' }}>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#FF3333', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <UserCheck size={20} /> HITL Compliance Reviewer Console
-                </h3>
-                <button onClick={() => setHitlModalOpen(false)} style={{ background: 'none', border: 'none', color: '#CCCCCC', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-              </div>
-
-              <p style={{ fontSize: '0.8rem', color: '#CCCCCC', marginBottom: '1rem' }}>
-                Human-In-The-Loop review for <strong>Sakhile Tuckshop (Owner ID: 8503125099087)</strong>.
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: '#CCCCCC' }}>Compliance Auditor Notes:</label>
-                  <input 
-                    type="text"
-                    placeholder="Enter manual verification details e.g. Phone verification confirmed..."
-                    value={hitlNotes}
-                    onChange={(e) => setHitlNotes(e.target.value)}
-                    style={{ width: '100%', backgroundColor: '#170505', border: '1px solid #4A1A1A', borderRadius: '6px', padding: '0.6rem', color: '#FFF', fontSize: '0.82rem', marginTop: '0.25rem' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                <button onClick={() => setHitlModalOpen(false)} className="btn-outline" style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}>
-                  Cancel
-                </button>
-                <button 
-                  onClick={() => {
-                    setHitlRouted(true);
-                    setHitlModalOpen(false);
-                  }}
-                  className="btn-lime" 
-                  style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
-                >
-                  Confirm & Route to HITL Queue
-                </button>
-              </div>
-
+        {/* NOC REAL-TIME TERMINAL CONSOLE LOG */}
+        <section className="noc-terminal">
+          <div className="flex items-center justify-between pb-2 mb-3 border-b border-[#4A1A1A]">
+            <div className="flex items-center gap-2">
+              <Terminal className="w-4 h-4 text-[#D4EB00]" />
+              <span className="font-bold text-white uppercase tracking-wider text-xs">NOC Real-Time Execution Console Log</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={exportAuditLogs}
+                className="text-[11px] text-[#D4EB00] hover:underline flex items-center gap-1 font-mono"
+              >
+                <Download className="w-3.5 h-3.5" /> Export Audit Log
+              </button>
+              <span className="text-[11px] text-[#998888]">{logs.length} Entries</span>
             </div>
           </div>
-        )}
+
+          <div className="space-y-1 max-h-48 overflow-y-auto font-mono text-xs">
+            {logs.map((log, index) => (
+              <div 
+                key={index}
+                className={
+                  log.includes('CRITICAL') || log.includes('FLAGGED') || log.includes('LETHAL') 
+                    ? 'text-[#FF3333] font-bold'
+                    : log.includes('AGENT')
+                    ? 'text-[#D4EB00]'
+                    : 'text-[#CCCCCC]'
+                }
+              >
+                {log}
+              </div>
+            ))}
+          </div>
+        </section>
 
       </main>
 
-      {/* FOOTER */}
-      <footer style={{ maxWidth: '1440px', margin: '2.5rem auto 0', padding: '1rem 1.5rem', borderTop: '1px solid #4A1A1A', display: 'flex', justifyContent: 'space-between', color: '#888888', fontSize: '0.75rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          © 2026 BryteSika Fintech (Lesaka Group LSAK/LSK). Cloudflare Pages Deployment.
-        </div>
-        <div style={{ display: 'flex', gap: '1.25rem' }}>
-          <span>Leaflet Carto Dark Maps</span>
-          <span>Google Gemini 1.5 Revenue AI</span>
-          <span>Qwen 2.5-7B FICA Engine</span>
+      {/* STICKY FOOTER: EXECUTIVE GOVERNANCE OVERLAY */}
+      <footer className="sticky bottom-0 z-40 bg-[#240C0C] border-t border-[#4A1A1A] px-6 py-4 shadow-2xl">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          
+          {/* Governance Label */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#341212] border border-[#4A1A1A] flex items-center justify-center text-[#FF3333]">
+              <ShieldAlert className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-sm text-white uppercase tracking-wider">
+                  Executive Governance Overlay
+                </span>
+                <span className={isTrapActive ? "badge-red" : "badge-lime"}>
+                  {isTrapActive ? "Lethal Risk Intercept Active" : "AI-SRF Sentinel Online"}
+                </span>
+              </div>
+              <p className="text-xs text-[#CCCCCC]">
+                Real-Time Human-In-The-Loop (HITL) Safety & Risk Protocol Monitor
+              </p>
+            </div>
+          </div>
+
+          {/* Footer Secondary Action Button (Simulate Edge Case) */}
+          <div className="flex items-center gap-3">
+            {isTrapActive && (
+              <button
+                onClick={resetDashboard}
+                className="px-3.5 py-2 rounded-lg border border-[#4A1A1A] bg-[#150606] text-xs font-semibold text-white hover:bg-[#341212] transition-all"
+              >
+                Reset System State
+              </button>
+            )}
+
+            <button
+              onClick={triggerGovernanceTrap}
+              disabled={isOrchestrating}
+              className="btn-trap-red"
+            >
+              <AlertTriangle className="w-4 h-4 text-[#FF3333]" />
+              Simulate Edge Case (Device Tampering)
+            </button>
+          </div>
+
         </div>
       </footer>
+
+      {/* GOVERNANCE TRAP MODAL: [sage_srai_Flag TRIGGERED - LETHAL RISK EXCEPTION] */}
+      {showTrapModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fadeIn">
+          
+          <div className="bg-[#240C0C] border-2 border-[#FF3333] rounded-2xl max-w-2xl w-full p-6 shadow-[0_0_50px_rgba(255,51,51,0.5)] space-y-6 relative overflow-hidden">
+            
+            {/* Top Hazard Bar */}
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#FF3333] via-amber-500 to-[#FF3333]"></div>
+
+            {/* Badge & Title */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="bg-[#FF3333] text-white font-mono text-xs font-black px-3 py-1 rounded tracking-widest uppercase">
+                  sage_srai_Flag TRIGGERED
+                </span>
+                <span className="text-xs font-mono text-[#FF3333] font-bold">
+                  HIGH HAZARD • LEVEL 3 ESCALATION
+                </span>
+              </div>
+
+              <h2 className="text-2xl font-black text-[#FF3333] tracking-tight flex items-center gap-2">
+                <AlertOctagon className="w-8 h-8 text-[#FF3333] shrink-0" />
+                [sage_srai_Flag TRIGGERED - LETHAL RISK EXCEPTION]
+              </h2>
+            </div>
+
+            {/* Strict Required Modal Text */}
+            <div className="bg-[#180707] border border-[#FF3333]/40 rounded-xl p-5 space-y-3">
+              <p className="text-sm font-semibold text-white leading-relaxed">
+                Autonomous dispatch halted. Physical tampering detected at Roodepoort vault. AI-SRF protocols require Level 3 Security escalation and MANDATORY HUMAN-IN-THE-LOOP (HITL) APPROVAL.
+              </p>
+            </div>
+
+            {/* Threat & Sensor Details */}
+            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+              <div className="bg-[#150606] border border-[#4A1A1A] p-3 rounded-lg text-[#CCCCCC]">
+                <span className="text-[#998888] block mb-1">Target Vault:</span>
+                <strong className="text-white">Cash Connect #CC-8842 (Roodepoort)</strong>
+              </div>
+              <div className="bg-[#150606] border border-[#4A1A1A] p-3 rounded-lg text-[#CCCCCC]">
+                <span className="text-[#998888] block mb-1">Anomaly Type:</span>
+                <strong className="text-[#FF3333]">Vault Door Forced Access & Vibration</strong>
+              </div>
+              <div className="bg-[#150606] border border-[#4A1A1A] p-3 rounded-lg text-[#CCCCCC]">
+                <span className="text-[#998888] block mb-1">Safety Risk Score:</span>
+                <strong className="text-[#FF3333]">0.99 / 1.00 (Lethal Threat)</strong>
+              </div>
+              <div className="bg-[#150606] border border-[#4A1A1A] p-3 rounded-lg text-[#CCCCCC]">
+                <span className="text-[#998888] block mb-1">Blocked Action:</span>
+                <strong className="text-amber-400">Technician Sipho Dispatch Halted</strong>
+              </div>
+            </div>
+
+            {/* HITL Decision Controls */}
+            <div className="space-y-3 pt-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#CCCCCC] block">
+                Required Human-In-The-Loop (HITL) Executive Action:
+              </span>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  onClick={() => {
+                    setHitlActionTaken("LEVEL_3_ARMED_SECURITY");
+                    setShowTrapModal(false);
+                    addLog(`[HITL DECISION EXECUTED] User approved Level 3 Armed Security Escort dispatch to Roodepoort Node.`);
+                  }}
+                  className="bg-[#FF3333] hover:bg-red-600 text-white font-bold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  Authorize Armed Security Escort
+                </button>
+
+                <button
+                  onClick={() => {
+                    setHitlActionTaken("CLEAR_EMERGENCY");
+                    setShowTrapModal(false);
+                    setIsTrapActive(false);
+                    addLog(`[HITL DECISION EXECUTED] User acknowledged & cleared emergency override.`);
+                  }}
+                  className="bg-[#341212] hover:bg-[#4A1A1A] text-white border border-[#4A1A1A] font-bold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all"
+                >
+                  Acknowledge & Clear Flag
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      )}
 
     </div>
   );
